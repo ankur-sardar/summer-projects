@@ -1,0 +1,16 @@
+{
+  "name": "door-system-server",
+  "version": "0.0.0",
+  "description": "",
+  "main": "door.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.13.4",
+    "redis": "^2.6.0-1",
+    "nodemailer": "^2.5.0"
+  }
+}

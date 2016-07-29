@@ -1,0 +1,217 @@
+<!-- Created by Kartik Singh   -->
+
+<!DOCTYPE html>
+
+<html>
+<head>
+	<style>
+  body {
+    background-image:url('back.png');
+    background-repeat: no-repeat;
+    margin-left:auto;
+    margin-right:auto;
+    width:1366px;
+  }
+  .ui-widget-header,.ui-state-default{
+    background:#b9cd6d;
+    border: 1px solid #b9cd6d;
+    color: #FBCF00;
+    font-weight: bold;
+  }
+  </style>
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.4.min.js"></script>
+  <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+</head>
+<body>
+  <canvas id="myCanvas" width=1366 height=768 style="border:1px solid #d3d3d3;position:absolute;left:0px;">
+  </canvas>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+  $(document).ready(function() {
+    var screenWidth = $(window).width();
+    console.log(screenWidth);
+    var parent = myCanvas.parentNode;
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    ctx.font = "bold 15px Arial";
+    var countR = 0;
+    var visible = false;
+    var receiversArray = [];
+
+    var R0 = new Receiver(0,50,450,35,35,"Meeting Room");
+    var R1 = new Receiver(1,180,300,35,35,"Conference Room");
+    var R2 = new Receiver(2,480,160,35,35,"Compound");
+
+    function ToolTip(canvas, region,listOfPeripherals, width, timeout,div) {
+        
+        var me = this;
+        parent = canvas.parentNode;              
+        visible = false;                        
+        div.innerHTML = "No beacons received";
+        div.style.cssText = "text-shadow:1px 1px 1px rgba(204,199,198,1);font-weight:normal;color:#000000;background-color:#FFFFFF;border: 5px ridge #474747;letter-spacing:1pt;word-spacing:2pt;font-size:12px;text-align:left;font-family:impact, sans-serif;line-height:1;color:black;position:fixed;padding:7px;background:white;pointer-events:none;white-space: pre-wrap;width" + "px";
+        console.log(listOfPeripherals);
+        if(listOfPeripherals.length>0) {
+          var placeHolder = "";
+          for(var x in listOfPeripherals) {
+            placeHolder += listOfPeripherals[x]+"\n\r";
+          }
+        }
+        else {
+          var placeHolder = "No beacons received\n";
+        }
+        div.innerHTML = placeHolder;
+        this.show = function(posAbs,pos) {
+            setDivPos(posAbs);
+            if (!visible &&
+              pos.x >= region.x && pos.x < region.x + region.width &&
+              pos.y >= region.y && pos.y < region.y + region.height) {
+                  visible = true;                           
+                  parent.appendChild(div);                      
+                }
+                else if(!(
+                  pos.x >= region.x && pos.x < region.x + region.width &&
+                  pos.y >= region.y && pos.y < region.y + region.height)) {
+                setDivPos(posAbs); 
+                hide();
+              }               
+          }
+          function hide() {
+            visible = false;                          
+            $(div).remove();                    
+          }
+          function check(e) {
+          console.log("check");
+          var pos = getPos(e);
+          posAbs = {x: region.x + 10, y: region.y + 10}; 
+              me.show(posAbs,pos);                   
+          }
+          function getPos(e) {
+            var r = canvas.getBoundingClientRect();
+            return {x: e.clientX - r.left, y: e.clientY - r.top};
+          }
+          function setDivPos(pos) {
+              if (visible){
+                if (pos.x < 0) pos.x = 0;
+                if (pos.y < 0) pos.y = 0;
+                  div.style.left = pos.x + "px";
+                  div.style.top = pos.y + "px";
+              }
+          }
+          canvas.addEventListener("mousemove", check,false);
+    }
+
+    function readTextFile(file) {
+      var rawFile = new XMLHttpRequest();
+      rawFile.open("GET", file, true);
+      rawFile.onreadystatechange = function ()
+      {
+        if(rawFile.readyState === 4)
+        {
+          if(rawFile.status === 200 || rawFile.status == 0)
+          {
+            var allText = (rawFile.responseText);
+            console.log(allText);
+            allTextLines = allText.split(/\r\n|\n/);
+            for(var i in allTextLines){
+              var line = allTextLines[i].split(',');
+              console.log("RID ",line[0],"X ",line[1],"Y ",line[2]);
+              new Receiver(line[0],line[1],line[2],35,35,line[3]);
+            }
+          }
+        }
+      }
+      rawFile.send(null);
+    }
+
+    //The file can be read through the code line below
+
+    //readTextFile("https://drive.google.com/file/d/0B86lPWIEG3hpYWpXckFLUXBCRkk/view?usp=sharing");
+
+    function make_base(x,y) {
+      base_image = new Image();
+      base_image.src = 'http://vignette2.wikia.nocookie.net/caramelangel714/images/7/72/Location_Icon.png/revision/latest?cb=20140427224234';
+      base_image.onload = function() {
+        ctx.drawImage(base_image, x, y,30,30);
+      }
+    }
+    function Receiver(rid,x,y,width,height,name) {
+      this.previous = 0;
+      countR++;
+      this.count = 0;
+      this.rid = rid;
+      this.x = x;
+      this.y = y;
+      this.width = width;
+      this.height = height;
+      make_base(x,y);
+      ctx.fillText(name,x-30,y+36);
+      receiversArray.push(this);
+      this.listOfPeripherals = [];
+      this.div = document.createElement("div");
+      this.div.id = countR;
+      ctx.fillText(this.listOfPeripherals.length,x+5,y+55);
+      this.tool = new ToolTip(myCanvas,this,this.listOfPeripherals,150,5000,this.div);
+    }
+    
+    var socket = io.connect('http://127.0.0.1:10000/');
+
+    socket.on('RID+EID', function(value) {
+      console.log('The server has a message for you: ' + value);
+      messageDecoded = value.split('+');
+      for(var x in receiversArray) {
+          receiversArray[x].previous = receiversArray[x].listOfPeripherals.length;
+          if($.inArray(messageDecoded[1],receiversArray[x].listOfPeripherals) >= 0) {
+            var index = receiversArray[x].listOfPeripherals.indexOf(messageDecoded[1]);
+            receiversArray[x].listOfPeripherals.splice(index,1);
+            console.log("We are removed from the peripherals",receiversArray[x].listOfPeripherals);
+            if(visible == false) {
+              receiversArray[x].toolTip = ToolTip(myCanvas, receiversArray[x], receiversArray[x].listOfPeripherals, 150, 5000,receiversArray[x].div);
+            }
+          }
+          if(messageDecoded[0] != -1) {
+            if(messageDecoded[0] == receiversArray[x].rid) {
+                receiversArray[x].listOfPeripherals.push(messageDecoded[1]);
+                console.log("We are added in the peripherals",receiversArray[x].listOfPeripherals);
+              if(visible == false) {
+                    receiversArray[x].toolTip = ToolTip(myCanvas, receiversArray[x], receiversArray[x].listOfPeripherals, 150, 5000,receiversArray[x].div);
+              }
+            }
+          }    
+      }
+      for(var x in receiversArray) {
+        if(receiversArray[x].listOfPeripherals.length == 0) {
+          ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+40,150,15);
+          ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+55,150,15);
+          ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+70,150,15);
+          ctx.font = "bold 15px Arial";
+          ctx.fillText(receiversArray[x].listOfPeripherals.length,receiversArray[x].x + 5,receiversArray[x].y + 55);
+        }
+        else if(receiversArray[x].listOfPeripherals.length == 1) {
+          ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+40,150,15);
+          ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+55,150,15);
+          ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+70,150,15);
+          ctx.font = "bold 15px Arial";
+          ctx.fillText(receiversArray[x].listOfPeripherals[0],receiversArray[x].x+5,receiversArray[x].y+55);
+          ctx.fillText('+'+(receiversArray[x].listOfPeripherals.length-1),receiversArray[x].x+5,receiversArray[x].y+70);
+        }
+        else if(receiversArray[x].listOfPeripherals.length >= 2) {
+          if(receiversArray[x].previous != receiversArray[x].listOfPeripherals.length) {
+            ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+40,150,15);
+            ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+55,150,15);
+            ctx.clearRect(receiversArray[x].x+5,receiversArray[x].y+70,150,15);
+            ctx.font = "bold 15px Arial";
+            ctx.fillText(receiversArray[x].listOfPeripherals[0],receiversArray[x].x+5,receiversArray[x].y+55);
+            ctx.fillText(receiversArray[x].listOfPeripherals[1],receiversArray[x].x+5,receiversArray[x].y+70);
+            ctx.fillText('+'+(receiversArray[x].listOfPeripherals.length-2),receiversArray[x].x+5,receiversArray[x].y+85);
+          }
+        }
+      }
+      socket.emit("response","");
+    });
+  });
+  </script>
+
+</body>
+</html>
+
